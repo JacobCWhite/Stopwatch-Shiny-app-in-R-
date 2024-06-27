@@ -1,0 +1,118 @@
+# install.packages("shinythemes")
+# install.packages("shiny")          
+# install.packages("DT")
+# install.packages("lubridate")
+# install.packages("keys")
+library(shinythemes)
+library(shiny)          
+library(DT)
+library(lubridate)
+library(keys)
+
+#Setting how many digits of milliseconds you want to collect
+my_options <- options(digits.secs = 3) 
+
+# Define UI for application that creates the stopwatch
+ui <- fluidPage(
+  # I didn't feel the need to add a title
+  title = NULL, 
+  # you can set the color scheme, I thought cerulean blue was nice on the eyes
+  theme = shinytheme("cerulean"),
+  lang = NULL,
+  hr(),
+  # This is programming what each button does. It is important to have a keydown event that will start the stopwatch.
+  # However, computers have 'repeat key' functions. When you hold down the "a" key you will keep typing a's.
+  # you need the !e.repeat function to ignore the repeat key function, otherwise it will make a new trial 
+  tags$script(HTML('document.addEventListener("keydown", function(e) {
+                                 if (!e.repeat) {
+                                 Shiny.setInputValue("start", e.key == 32, {priority: "event"});
+                                 }
+                                  }
+                                 );
+                                  ')),
+  tags$script(HTML('document.addEventListener("keyup", function(e) {
+                                 Shiny.setInputValue("reset", e.key == 32, {priority: "event"});
+                                 }
+                                 );
+                                  ')),
+  # Application title
+  titlePanel("StopWatch"),
+  sidebarPanel(
+    textOutput('stopwatch'),
+  ),
+  
+  tags$hr(),
+  mainPanel(
+    DT::dataTableOutput("TailFlickTrials")
+  ),
+  tags$hr(),
+  mainPanel(
+    DT::dataTableOutput("TailFlickTrials")
+  ),
+  downloadButton('download',"Download the data")
+)
+
+# Define server logic
+server <- function(input, output, session) {
+  
+  #create data frame with 0 rows and 5 columns
+  v <- reactiveValues()
+  v$df <- data.frame(Trial_Date = character(), Start_Time = numeric(), End_Time = numeric(), 
+                     TimeLapsed = numeric(), stringsAsFactors = FALSE)
+  
+  start_timing <- as.numeric(Sys.time())
+  
+  tmp_Trial_Date <- character()
+  tmp_Start_Time <- numeric(0)
+  tmp_End_Time <- numeric(0)
+  
+  # observeEvent for the keydown event
+  observeEvent(input$start,{
+    # on keydown event erase values of tmp_End_Time and tmp_Time_Lapsed previous saved
+    # on keydown add one to tmp_Trial
+    # on keydown, input new values for tmp_Trial, tmp_Trial_Date, and tmp_Start_Time        
+    tmp_Trial_Date <- Sys.time()
+    tmp_Start_Time <- Sys.time()
+    # append tmp_Trial, tmp_Trial_date, tmp_Start_time to df
+    # this method allows for the new row to have NA values for the End_Time and TimeLapsed columns. the code below will append those values to the row. 
+    new_row <- head(v$df["Trial",], 1)
+    new_row[c('Trial_Date', 'Start_Time')] <- list(Trial_Date = tmp_Trial_Date, Start_Time = tmp_Start_Time)
+    v$df <- rbind(v$df, new_row)
+  })
+  
+  # observeEvent for the keyup event
+  observeEvent(input$reset,{
+    # on keyup event erase values of tmp_Trial_Date, and tmp_Start_Time, previously saved
+    tmp_Trial_Date <- character()
+    tmp_Start_Time <- numeric(0)
+    new_row <- head(v$df[NA,], 1)
+    # on keyup, input new values for tmp_End_Time and tmp_Time_Lapsed
+    tmp_End_Time <- Sys.time()
+    tmp_TimeLapsed <- round(as.numeric(difftime(tmp_End_Time, v$df[nrow(v$df), 2], units ="secs")),3)
+    # on keyup, combine tmp_End_Time and tmp_TimeLapsed into new vector called tmp
+    # append tmp_End_Time and tmp_Time_Lapsed to df's last row by called nrow() in the row and the last two columns. 
+    v$df[nrow(v$df), 3] <- tmp_End_Time
+    v$df[nrow(v$df), 4] <- tmp_TimeLapsed
+  })
+  
+  output$stopwatch <- renderText({
+    as.numeric(Sys.time(), invalidateLater(100, session)) - start_timing
+  })
+  
+  output$TailFlickTrials <- DT::renderDataTable({
+    v$df
+  })
+  # code to download the data as a .csv
+  output$download <-       
+    downloadHandler(
+      filename = function () {
+        paste("MyData.csv")
+      },
+      content = function(file) {
+        write.csv(v$df, file)
+      }
+    )
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
