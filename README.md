@@ -9,3 +9,6 @@ This Shiny app is a unique stopwatch for several reasons:
 2. Ignoring Repeat Keys: I programmed the app to ignore repeat key presses. The idea was to start the timer by pressing down the space bar and to hold it down until the rat initiated the behavioral endpoint. When the rat initiated the endpoint, you would release the space bar. Upon releasing the space bar, the application records a new row with the time taken for each trial. Ignoring repeat key presses prevents the stopwatch from creating new trials while the key is held down, which is not desirable for this experiment.
 
 3. Easy Data Download: This stopwatch allows for easy downloading of data into a .csv file, eliminating the need to tediously write down the data manually.
+
+You can use my code to create your own stopwatch or follow this link to my Shiny application!
+https://jacobchriswhite.shinyapps.io/stopwatch/
